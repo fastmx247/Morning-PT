@@ -1,8 +1,6 @@
-const CACHE_NAME = "morning-pt-v3";
-const FILES = ["./", "index.html", "manifest.json"];
+const CACHE_NAME = "morning-pt-v4";
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(FILES)));
   self.skipWaiting();
 });
 
@@ -16,5 +14,5 @@ self.addEventListener("activate", event => {
 });
 
 self.addEventListener("fetch", event => {
-  event.respondWith(caches.match(event.request).then(response => response || fetch(event.request)));
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
