@@ -1,0 +1,10 @@
+{
+  "name": "15-Minute Morning Calisthenics",
+  "short_name": "Morning PT",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1f2937",
+  "description": "No-jumping 15-minute morning calisthenics workout for men over 40.",
+  "icons": []
+}
