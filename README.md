@@ -2,17 +2,15 @@
 
 A simple 15-minute no-jump morning calisthenics timer built for men over 40.
 
-This lightweight web app is designed to be opened in Safari and added to an iPhone Home Screen like an app. No subscription, no login, no TestFlight, and no App Store install required.
+## Features
 
-## Workout Format
-
-- 15 minutes total
+- 15-minute timer
 - 3 rounds
-- 40 seconds work
-- 20 seconds rest
+- 40 seconds work / 20 seconds rest
+- Next workout prompt during rest
+- Voice cues for start, rest, countdown, and next movement
 - No jumping
-- Joint-friendly movements
-- Built for quick morning use before work
+- iPhone and Android home-screen friendly
 
 ## Standard Circuit
 
@@ -27,6 +25,14 @@ This lightweight web app is designed to be opened in Safari and added to an iPho
 1. Open the hosted GitHub Pages app link in Safari.
 2. Tap the Share button.
 3. Select **Add to Home Screen**.
+4. Name it **Morning PT**.
+5. Tap **Add**.
+
+## How to Use on Android
+
+1. Open the hosted GitHub Pages app link in Chrome.
+2. Tap the three-dot menu.
+3. Select **Add to Home screen**.
 4. Name it **Morning PT**.
 5. Tap **Add**.
 

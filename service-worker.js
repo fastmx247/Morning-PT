@@ -1,4 +1,4 @@
-const CACHE_NAME = "morning-pt-v1";
+const CACHE_NAME = "morning-pt-v2";
 const FILES = ["./", "index.html", "manifest.json"];
 
 self.addEventListener("install", event => {
@@ -7,7 +7,12 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
+    )
+  );
+  self.clients.claim();
 });
 
 self.addEventListener("fetch", event => {
