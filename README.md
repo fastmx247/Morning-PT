@@ -22,26 +22,13 @@ This lightweight web app is designed to be opened in Safari and added to an iPho
 4. Reverse Lunges
 5. Dead Bugs
 
-## Mobility + Core Option
-
-Use this version on stiff mornings:
-
-1. Chair Squats
-2. Glute Bridges
-3. Forearm Plank
-4. Dead Bugs
-
 ## How to Use on iPhone
 
-1. Open the hosted app link in Safari.
+1. Open the hosted GitHub Pages app link in Safari.
 2. Tap the Share button.
 3. Select **Add to Home Screen**.
 4. Name it **Morning PT**.
 5. Tap **Add**.
-
-## Purpose
-
-This app was created as a simple alternative to paid workout timer apps. The goal is to make a practical, repeatable morning routine that builds strength, mobility, and core stability without jumping or unnecessary complexity.
 
 ## Notes
 
