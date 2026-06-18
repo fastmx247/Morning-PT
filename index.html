@@ -50,13 +50,14 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
 .item b{color:white}
 .item span{color:var(--muted);font-size:14px;line-height:1.35}
 .help{color:var(--muted);font-size:15px;line-height:1.45}
+.small{font-size:12px;color:#94a3b8;line-height:1.35;text-align:center;margin-top:6px}
 </style>
 </head>
 <body>
 <div class="app">
 <h1>Morning PT</h1>
 <div class="sub">15-minute military calisthenics<br>No jumping • Men over 40 • Before work</div>
-<div class="version">Version 4.0 — Voice Fix</div>
+<div class="version">Version 5.0 — Device Voice List</div>
 
 <section id="card" class="card">
   <div class="top">
@@ -83,16 +84,16 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
       <input id="voice" type="checkbox" checked>
       Voice cues on
     </label>
+
     <div class="voicegrid">
-      <select id="voiceStyle">
-        <option value="auto">System Default</option>
-        <option value="coach">Command Voice</option>
-        <option value="deep">Deep Coach Style</option>
-        <option value="britishFemale">British Female Style</option>
+      <select id="voiceSelect">
+        <option value="">Loading device voices...</option>
       </select>
-      <button id="testVoice" class="testvoice" type="button">Test Voice / Sound</button>
+      <button id="testVoice" class="testvoice" type="button">Test Selected Voice</button>
     </div>
-    <div id="soundstatus" class="soundstatus">Tap Test Voice to unlock sound.</div>
+
+    <div id="soundstatus" class="soundstatus">Tap Test Selected Voice to unlock sound.</div>
+    <div class="small">Preferred voices are shown first when available.</div>
   </div>
 
   <div class="controls">
@@ -108,17 +109,27 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
 </section>
 
 <section class="card">
-  <h2 style="margin-top:0">iPhone / Android Setup</h2>
+  <h2 style="margin-top:0">Voice Notes</h2>
   <div class="help">
-    Open the GitHub Pages app link in Safari or Chrome and add it to your Home Screen.
+    The app now uses the actual voices available on your device/browser. It looks for voices like <b>Samantha</b>, <b>Alex</b>, <b>Daniel</b>, <b>Google US English</b>, <b>Google UK English Female</b>, <b>Microsoft Aria</b>, and <b>Microsoft Guy</b>.
     <br><br>
-    <b>Voice note:</b> If you do not hear sound, tap <b>Test Voice / Sound</b> once. On iPhone, turn off Silent Mode and raise media volume.
+    If a voice is not listed, the phone/browser is not exposing it to the app.
   </div>
 </section>
 </div>
 
 <script>
-const APP_VERSION="4.0";
+const APP_VERSION="5.0";
+const PREFERRED_VOICE_NAMES=[
+  "Samantha",
+  "Alex",
+  "Daniel",
+  "Google US English",
+  "Google UK English Female",
+  "Microsoft Aria",
+  "Microsoft Guy"
+];
+
 const exercises=[
 {name:"Incline Push-Ups",tip:"Hands on a counter, desk, or sturdy chair. Keep your body straight and elbows about 45 degrees.",how:"Use a counter or desk. Lower under control. Press back up."},
 {name:"Bodyweight Squats",tip:"Chest up. Sit your hips back like you are reaching for a chair. Keep your heels down.",how:"Feet shoulder-width. Sit back, lower comfortably, then stand tall."},
@@ -146,7 +157,7 @@ reset:document.getElementById("reset"),
 workout:document.getElementById("workout"),
 nextname:document.getElementById("nextname"),
 voice:document.getElementById("voice"),
-voiceStyle:document.getElementById("voiceStyle"),
+voiceSelect:document.getElementById("voiceSelect"),
 testVoice:document.getElementById("testVoice"),
 soundstatus:document.getElementById("soundstatus")
 };
@@ -161,35 +172,91 @@ function unlockAudio(){
   }catch(err){return false;}
 }
 
+function voicePriority(v){
+  const name=(v.name||"").toLowerCase();
+  for(let i=0;i<PREFERRED_VOICE_NAMES.length;i++){
+    if(name.includes(PREFERRED_VOICE_NAMES[i].toLowerCase())) return i;
+  }
+  if(/^en-US|en_US/i.test(v.lang)) return 50;
+  if(/^en-GB|en_GB/i.test(v.lang)) return 55;
+  if(/^en/i.test(v.lang)) return 60;
+  return 100;
+}
+
 function loadVoices(){
-  if(!("speechSynthesis" in window)) return;
-  availableVoices = window.speechSynthesis.getVoices() || [];
+  if(!("speechSynthesis" in window)){
+    el.voiceSelect.innerHTML='<option value="">Speech not supported</option>';
+    el.soundstatus.textContent="This browser does not support speech.";
+    return;
+  }
+
+  const voices=window.speechSynthesis.getVoices() || [];
+  availableVoices=voices.slice().sort((a,b)=>{
+    const pa=voicePriority(a), pb=voicePriority(b);
+    if(pa!==pb) return pa-pb;
+    return (a.name||"").localeCompare(b.name||"");
+  });
+
+  populateVoiceDropdown();
 }
 
-function pickVoice(style){
+function populateVoiceDropdown(){
+  const saved=localStorage.getItem("morningPTVoiceName") || "";
+  el.voiceSelect.innerHTML="";
+
+  if(!availableVoices.length){
+    const opt=document.createElement("option");
+    opt.value="";
+    opt.textContent="No voices loaded yet — tap Test";
+    el.voiceSelect.appendChild(opt);
+    return;
+  }
+
+  const auto=document.createElement("option");
+  auto.value="";
+  auto.textContent="Auto / Best Available";
+  el.voiceSelect.appendChild(auto);
+
+  availableVoices.forEach((v)=>{
+    const opt=document.createElement("option");
+    opt.value=v.name;
+    const preferred=PREFERRED_VOICE_NAMES.some(p=>v.name.toLowerCase().includes(p.toLowerCase()));
+    opt.textContent=(preferred?"★ ":"")+v.name+" — "+v.lang;
+    el.voiceSelect.appendChild(opt);
+  });
+
+  if(saved && availableVoices.some(v=>v.name===saved)){
+    el.voiceSelect.value=saved;
+  }else{
+    const firstPreferred=availableVoices.find(v=>PREFERRED_VOICE_NAMES.some(p=>v.name.toLowerCase().includes(p.toLowerCase())));
+    if(firstPreferred) el.voiceSelect.value=firstPreferred.name;
+  }
+
+  el.soundstatus.textContent=`${availableVoices.length} device voice(s) found.`;
+}
+
+function selectedVoice(){
   if(!availableVoices.length) loadVoices();
-  const voices=availableVoices;
-  if(!voices.length) return null;
-  const by=(fn)=>voices.find(fn)||null;
-
-  if(style==="britishFemale"){
-    return by(v=>/en-GB|en_GB/i.test(v.lang)&&/female|samantha|serena|susan|kate|victoria|moira|tessa|zira|google uk english female/i.test(v.name))
-    || by(v=>/en-GB|en_GB/i.test(v.lang))
-    || by(v=>/female|samantha|serena|susan|kate|victoria|moira|tessa|zira/i.test(v.name));
+  const selectedName=el.voiceSelect.value;
+  if(selectedName){
+    return availableVoices.find(v=>v.name===selectedName) || null;
   }
-  if(style==="deep"){
-    return by(v=>/daniel|alex|fred|ralph|tom|david|mark|google uk english male|male/i.test(v.name)) || by(v=>/^en/i.test(v.lang));
-  }
-  if(style==="coach"){
-    return by(v=>/alex|daniel|david|mark|tom|google us english|microsoft david|microsoft mark/i.test(v.name)) || by(v=>/^en-US|en_US/i.test(v.lang)) || by(v=>/^en/i.test(v.lang));
-  }
-  return by(v=>/^en/i.test(v.lang)) || voices[0];
+  return availableVoices.find(v=>voicePriority(v)<50) ||
+         availableVoices.find(v=>/^en-US|en_US/i.test(v.lang)) ||
+         availableVoices.find(v=>/^en-GB|en_GB/i.test(v.lang)) ||
+         availableVoices.find(v=>/^en/i.test(v.lang)) ||
+         availableVoices[0] ||
+         null;
 }
 
-function voiceSettings(style){
-  if(style==="deep") return {rate:.88,pitch:.72,volume:1};
-  if(style==="coach") return {rate:.92,pitch:.9,volume:1};
-  if(style==="britishFemale") return {rate:.96,pitch:1.12,volume:1};
+function voiceSettings(v){
+  const name=((v&&v.name)||"").toLowerCase();
+  if(name.includes("daniel") || name.includes("guy") || name.includes("alex")){
+    return {rate:.92,pitch:.9,volume:1};
+  }
+  if(name.includes("samantha") || name.includes("aria") || name.includes("female")){
+    return {rate:.96,pitch:1.05,volume:1};
+  }
   return {rate:.95,pitch:1,volume:1};
 }
 
@@ -213,20 +280,24 @@ function speak(text){
   loadVoices();
   window.speechSynthesis.cancel();
 
-  const style=el.voiceStyle.value;
+  const chosen=selectedVoice();
   const msg=new SpeechSynthesisUtterance(text);
-  const settings=voiceSettings(style);
-  const chosenVoice=pickVoice(style);
+  const settings=voiceSettings(chosen);
 
-  if(chosenVoice) msg.voice=chosenVoice;
-  msg.lang = chosenVoice ? chosenVoice.lang : "en-US";
+  if(chosen){
+    msg.voice=chosen;
+    msg.lang=chosen.lang;
+  }else{
+    msg.lang="en-US";
+  }
+
   msg.rate=settings.rate;
   msg.pitch=settings.pitch;
   msg.volume=settings.volume;
 
-  msg.onstart=()=>{el.soundstatus.textContent="Voice playing...";};
+  msg.onstart=()=>{el.soundstatus.textContent=chosen ? `Playing: ${chosen.name}` : "Voice playing...";};
   msg.onend=()=>{el.soundstatus.textContent="Voice ready.";};
-  msg.onerror=()=>{el.soundstatus.textContent="Voice blocked. Try Chrome/Safari and tap Test again.";};
+  msg.onerror=()=>{el.soundstatus.textContent="Voice blocked. Tap Test again or check volume.";};
 
   window.speechSynthesis.speak(msg);
 }
@@ -345,7 +416,7 @@ function reset(){
   clearInterval(id);
   if("speechSynthesis" in window) window.speechSynthesis.cancel();
   r=0;e=0;resting=false;left=work;elapsed=0;running=false;lastSpoken="";
-  el.soundstatus.textContent="Tap Test Voice to unlock sound.";
+  el.soundstatus.textContent="Tap Test Selected Voice to unlock sound.";
   draw();
 }
 
@@ -354,11 +425,16 @@ el.next.onclick=advance;
 el.reset.onclick=reset;
 el.testVoice.onclick=()=>{
   unlockAudio();
+  loadVoices();
   lastSpoken="";
   tone(880,180);
   setTimeout(()=>speak("Morning P T voice test. Start Incline Push-Ups."),180);
 };
-el.voiceStyle.onchange=()=>{lastSpoken="";el.soundstatus.textContent="Tap Test Voice to try this voice.";};
+el.voiceSelect.onchange=()=>{
+  localStorage.setItem("morningPTVoiceName",el.voiceSelect.value);
+  lastSpoken="";
+  el.soundstatus.textContent="Voice saved. Tap Test Selected Voice.";
+};
 
 renderList();
 draw();
@@ -366,10 +442,12 @@ draw();
 if("speechSynthesis" in window){
   loadVoices();
   window.speechSynthesis.onvoiceschanged=loadVoices;
+  setTimeout(loadVoices,250);
+  setTimeout(loadVoices,1000);
 }
 
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("service-worker.js?v=4").catch(()=>{});
+  navigator.serviceWorker.register("service-worker.js?v=5").catch(()=>{});
 }
 </script>
 </body>

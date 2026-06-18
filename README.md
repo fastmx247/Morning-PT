@@ -9,30 +9,33 @@ A simple 15-minute no-jump morning calisthenics timer built for men over 40.
 - 40 seconds work / 20 seconds rest
 - Next workout prompt during rest
 - Voice cues for start, rest, countdown, and next movement
-- Voice style selector
+- Actual device voice dropdown
+- Preferred voices sorted first when available
 - Voice test button
+- Saved voice preference
 - No jumping
 - iPhone and Android home-screen friendly
 
-## Voice Styles
+## Preferred Voice Search
 
-The app uses the browser/device text-to-speech voices available on the user's phone.
+The app looks for these voices when available:
 
-Included voice style options:
+- Samantha
+- Alex
+- Daniel
+- Google US English
+- Google UK English Female
+- Microsoft Aria
+- Microsoft Guy
 
-- System Default
-- Command Voice
-- Deep Coach Style
-- British Female Style
-
-Voice quality and available accents depend on the device and browser.
+If one of these voices does not appear, the phone/browser is not exposing it to the web app.
 
 ## Troubleshooting Sound
 
-- Tap **Test Voice / Sound** once before starting.
+- Tap **Test Selected Voice** once before starting.
 - On iPhone, turn off Silent Mode and raise media volume.
 - On desktop, make sure the browser tab/site is not muted.
-- If the old app is still showing, open the app link with `?v=4` at the end or remove and re-add the Home Screen icon.
+- If the old app is still showing, open the app link with `?v=5` at the end or remove and re-add the Home Screen icon.
 
 ## Standard Circuit
 
