@@ -35,9 +35,9 @@ h1{text-align:center;font-size:26px;line-height:1.1;margin:8px 0 4px}
 .soundpanel{margin-top:14px;padding:12px;border-radius:16px;background:rgba(51,65,85,.45);border:1px solid rgba(255,255,255,.08)}
 .soundrow{display:flex;gap:10px;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
 .soundrow input{width:22px;height:22px}
-.voicegrid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.soundgrid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
 select{width:100%;border:1px solid rgba(255,255,255,.18);background:#0f172a;color:var(--text);border-radius:12px;padding:12px;font-size:15px;font-weight:700}
-.testvoice{background:#475569;font-size:15px;padding:12px}
+.testsound{background:#475569;font-size:15px;padding:12px}
 .soundstatus{text-align:center;color:#fcd34d;font-size:12px;min-height:18px;margin-top:8px}
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
 button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;font-weight:900;background:var(--blue);cursor:pointer}
@@ -57,7 +57,7 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
 <div class="app">
 <h1>Morning PT</h1>
 <div class="sub">15-minute military calisthenics<br>No jumping • Men over 40 • Before work</div>
-<div class="version">Version 5.0 — Device Voice List</div>
+<div class="version">Version 6.0 — Sound Only</div>
 
 <section id="card" class="card">
   <div class="top">
@@ -81,19 +81,21 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
 
   <div class="soundpanel">
     <label class="soundrow">
-      <input id="voice" type="checkbox" checked>
-      Voice cues on
+      <input id="soundOn" type="checkbox" checked>
+      Sound cues on
     </label>
 
-    <div class="voicegrid">
-      <select id="voiceSelect">
-        <option value="">Loading device voices...</option>
+    <div class="soundgrid">
+      <select id="soundStyle">
+        <option value="classic">Classic Beep</option>
+        <option value="drill">Drill Tone</option>
+        <option value="soft">Soft Chime</option>
       </select>
-      <button id="testVoice" class="testvoice" type="button">Test Selected Voice</button>
+      <button id="testSound" class="testsound" type="button">Test Sound</button>
     </div>
 
-    <div id="soundstatus" class="soundstatus">Tap Test Selected Voice to unlock sound.</div>
-    <div class="small">Preferred voices are shown first when available.</div>
+    <div id="soundstatus" class="soundstatus">Tap Test Sound once to unlock audio.</div>
+    <div class="small">No voice. Just clear sounds for start, rest, countdown, and finish.</div>
   </div>
 
   <div class="controls">
@@ -109,26 +111,22 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
 </section>
 
 <section class="card">
-  <h2 style="margin-top:0">Voice Notes</h2>
+  <h2 style="margin-top:0">Sound Notes</h2>
   <div class="help">
-    The app now uses the actual voices available on your device/browser. It looks for voices like <b>Samantha</b>, <b>Alex</b>, <b>Daniel</b>, <b>Google US English</b>, <b>Google UK English Female</b>, <b>Microsoft Aria</b>, and <b>Microsoft Guy</b>.
+    This version removes voice cues and uses sound only.
     <br><br>
-    If a voice is not listed, the phone/browser is not exposing it to the app.
+    <b>Start:</b> strong tone<br>
+    <b>Rest:</b> lower double tone<br>
+    <b>Countdown:</b> 3 short beeps<br>
+    <b>Finish:</b> simple chime
+    <br><br>
+    On iPhone, turn off Silent Mode and raise media volume.
   </div>
 </section>
 </div>
 
 <script>
-const APP_VERSION="5.0";
-const PREFERRED_VOICE_NAMES=[
-  "Samantha",
-  "Alex",
-  "Daniel",
-  "Google US English",
-  "Google UK English Female",
-  "Microsoft Aria",
-  "Microsoft Guy"
-];
+const APP_VERSION="6.0";
 
 const exercises=[
 {name:"Incline Push-Ups",tip:"Hands on a counter, desk, or sturdy chair. Keep your body straight and elbows about 45 degrees.",how:"Use a counter or desk. Lower under control. Press back up."},
@@ -139,7 +137,7 @@ const exercises=[
 ];
 
 const work=40,rest=20,rounds=3,totalWorkout=900;
-let r=0,e=0,resting=false,left=work,elapsed=0,running=false,id=null,lastSpoken="",availableVoices=[],audioCtx=null;
+let r=0,e=0,resting=false,left=work,elapsed=0,running=false,id=null,lastCue="",audioCtx=null;
 
 const el={
 card:document.getElementById("card"),
@@ -156,9 +154,9 @@ next:document.getElementById("next"),
 reset:document.getElementById("reset"),
 workout:document.getElementById("workout"),
 nextname:document.getElementById("nextname"),
-voice:document.getElementById("voice"),
-voiceSelect:document.getElementById("voiceSelect"),
-testVoice:document.getElementById("testVoice"),
+soundOn:document.getElementById("soundOn"),
+soundStyle:document.getElementById("soundStyle"),
+testSound:document.getElementById("testSound"),
 soundstatus:document.getElementById("soundstatus")
 };
 
@@ -172,92 +170,61 @@ function unlockAudio(){
   }catch(err){return false;}
 }
 
-function voicePriority(v){
-  const name=(v.name||"").toLowerCase();
-  for(let i=0;i<PREFERRED_VOICE_NAMES.length;i++){
-    if(name.includes(PREFERRED_VOICE_NAMES[i].toLowerCase())) return i;
-  }
-  if(/^en-US|en_US/i.test(v.lang)) return 50;
-  if(/^en-GB|en_GB/i.test(v.lang)) return 55;
-  if(/^en/i.test(v.lang)) return 60;
-  return 100;
+function playTone(freq=880,duration=150,delay=0,type="sine",volume=.14){
+  if(!el.soundOn.checked) return;
+  try{
+    unlockAudio();
+    if(!audioCtx) return;
+    const start=audioCtx.currentTime + delay/1000;
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+
+    osc.type=type;
+    osc.frequency.setValueAtTime(freq,start);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    gain.gain.setValueAtTime(.001,start);
+    gain.gain.exponentialRampToValueAtTime(volume,start+.02);
+    gain.gain.exponentialRampToValueAtTime(.001,start+duration/1000);
+
+    osc.start(start);
+    osc.stop(start+duration/1000+.03);
+  }catch(err){}
 }
 
-function loadVoices(){
-  if(!("speechSynthesis" in window)){
-    el.voiceSelect.innerHTML='<option value="">Speech not supported</option>';
-    el.soundstatus.textContent="This browser does not support speech.";
+function sound(kind){
+  if(!el.soundOn.checked) return;
+  const style=el.soundStyle.value;
+
+  if(style==="soft"){
+    if(kind==="start"){playTone(660,160,0,"sine",.10);playTone(880,180,170,"sine",.10);}
+    if(kind==="rest"){playTone(440,140,0,"sine",.09);playTone(392,160,160,"sine",.09);}
+    if(kind==="count"){playTone(740,90,0,"sine",.08);}
+    if(kind==="finish"){playTone(523,140,0,"sine",.09);playTone(659,140,160,"sine",.09);playTone(784,220,320,"sine",.09);}
     return;
   }
 
-  const voices=window.speechSynthesis.getVoices() || [];
-  availableVoices=voices.slice().sort((a,b)=>{
-    const pa=voicePriority(a), pb=voicePriority(b);
-    if(pa!==pb) return pa-pb;
-    return (a.name||"").localeCompare(b.name||"");
-  });
-
-  populateVoiceDropdown();
-}
-
-function populateVoiceDropdown(){
-  const saved=localStorage.getItem("morningPTVoiceName") || "";
-  el.voiceSelect.innerHTML="";
-
-  if(!availableVoices.length){
-    const opt=document.createElement("option");
-    opt.value="";
-    opt.textContent="No voices loaded yet — tap Test";
-    el.voiceSelect.appendChild(opt);
+  if(style==="drill"){
+    if(kind==="start"){playTone(980,180,0,"square",.10);playTone(980,180,220,"square",.10);}
+    if(kind==="rest"){playTone(430,220,0,"square",.09);playTone(430,220,260,"square",.09);}
+    if(kind==="count"){playTone(850,100,0,"square",.08);}
+    if(kind==="finish"){playTone(700,140,0,"square",.08);playTone(900,140,180,"square",.08);playTone(1100,240,360,"square",.08);}
     return;
   }
 
-  const auto=document.createElement("option");
-  auto.value="";
-  auto.textContent="Auto / Best Available";
-  el.voiceSelect.appendChild(auto);
-
-  availableVoices.forEach((v)=>{
-    const opt=document.createElement("option");
-    opt.value=v.name;
-    const preferred=PREFERRED_VOICE_NAMES.some(p=>v.name.toLowerCase().includes(p.toLowerCase()));
-    opt.textContent=(preferred?"★ ":"")+v.name+" — "+v.lang;
-    el.voiceSelect.appendChild(opt);
-  });
-
-  if(saved && availableVoices.some(v=>v.name===saved)){
-    el.voiceSelect.value=saved;
-  }else{
-    const firstPreferred=availableVoices.find(v=>PREFERRED_VOICE_NAMES.some(p=>v.name.toLowerCase().includes(p.toLowerCase())));
-    if(firstPreferred) el.voiceSelect.value=firstPreferred.name;
-  }
-
-  el.soundstatus.textContent=`${availableVoices.length} device voice(s) found.`;
+  // classic
+  if(kind==="start"){playTone(880,160,0,"sine",.13);playTone(1040,160,180,"sine",.13);}
+  if(kind==="rest"){playTone(520,180,0,"sine",.12);playTone(420,180,220,"sine",.12);}
+  if(kind==="count"){playTone(760,100,0,"sine",.11);}
+  if(kind==="finish"){playTone(660,150,0,"sine",.11);playTone(880,150,170,"sine",.11);playTone(1040,250,340,"sine",.11);}
 }
 
-function selectedVoice(){
-  if(!availableVoices.length) loadVoices();
-  const selectedName=el.voiceSelect.value;
-  if(selectedName){
-    return availableVoices.find(v=>v.name===selectedName) || null;
-  }
-  return availableVoices.find(v=>voicePriority(v)<50) ||
-         availableVoices.find(v=>/^en-US|en_US/i.test(v.lang)) ||
-         availableVoices.find(v=>/^en-GB|en_GB/i.test(v.lang)) ||
-         availableVoices.find(v=>/^en/i.test(v.lang)) ||
-         availableVoices[0] ||
-         null;
-}
-
-function voiceSettings(v){
-  const name=((v&&v.name)||"").toLowerCase();
-  if(name.includes("daniel") || name.includes("guy") || name.includes("alex")){
-    return {rate:.92,pitch:.9,volume:1};
-  }
-  if(name.includes("samantha") || name.includes("aria") || name.includes("female")){
-    return {rate:.96,pitch:1.05,volume:1};
-  }
-  return {rate:.95,pitch:1,volume:1};
+function cue(kind){
+  if(kind===lastCue) return;
+  lastCue=kind;
+  sound(kind);
+  el.soundstatus.textContent="Sound cue: "+kind;
 }
 
 function fmt(s){
@@ -269,62 +236,6 @@ function nextExerciseName(){
   let ne=e+1,nr=r;
   if(ne>=exercises.length){ne=0;nr++;}
   return nr>=rounds ? "Workout complete" : exercises[ne].name;
-}
-
-function speak(text){
-  if(!el.voice.checked || !("speechSynthesis" in window)){
-    el.soundstatus.textContent="Voice is off or not supported.";
-    return;
-  }
-
-  loadVoices();
-  window.speechSynthesis.cancel();
-
-  const chosen=selectedVoice();
-  const msg=new SpeechSynthesisUtterance(text);
-  const settings=voiceSettings(chosen);
-
-  if(chosen){
-    msg.voice=chosen;
-    msg.lang=chosen.lang;
-  }else{
-    msg.lang="en-US";
-  }
-
-  msg.rate=settings.rate;
-  msg.pitch=settings.pitch;
-  msg.volume=settings.volume;
-
-  msg.onstart=()=>{el.soundstatus.textContent=chosen ? `Playing: ${chosen.name}` : "Voice playing...";};
-  msg.onend=()=>{el.soundstatus.textContent="Voice ready.";};
-  msg.onerror=()=>{el.soundstatus.textContent="Voice blocked. Tap Test again or check volume.";};
-
-  window.speechSynthesis.speak(msg);
-}
-
-function tone(freq=880,duration=160){
-  try{
-    unlockAudio();
-    if(!audioCtx) return;
-    const osc=audioCtx.createOscillator();
-    const gain=audioCtx.createGain();
-    osc.frequency.value=freq;
-    osc.type="sine";
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    gain.gain.setValueAtTime(.001,audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(.12,audioCtx.currentTime+.02);
-    gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration/1000);
-    osc.start();
-    osc.stop(audioCtx.currentTime+duration/1000+.02);
-  }catch(err){}
-}
-
-function cue(text,freq){
-  if(text===lastSpoken) return;
-  lastSpoken=text;
-  tone(freq);
-  speak(text);
 }
 
 function renderList(){
@@ -356,14 +267,14 @@ function draw(){
 function done(){
   running=false;
   clearInterval(id);
-  cue("Workout complete. Nice work.",660);
+  cue("finish");
   el.round.textContent="Workout complete";
   el.step.textContent="No jumping";
   el.remain.textContent="Done";
   el.phase.textContent="Complete";
   el.exercise.textContent="Nice work";
   el.timer.textContent="✓";
-  el.tip.textContent="You knocked out your morning P T.";
+  el.tip.textContent="You knocked out your morning PT.";
   el.nextname.textContent="Done";
   el.fill.style.width="100%";
   el.start.textContent="Start Again";
@@ -371,17 +282,18 @@ function done(){
 
 function advance(){
   unlockAudio();
+  lastCue="";
   if(!resting){
     resting=true;
     left=rest;
-    cue(`Rest. Coming up next: ${nextExerciseName()}`,520);
+    cue("rest");
   }else{
     resting=false;
     e++;
     if(e>=exercises.length){e=0;r++;}
     if(r>=rounds){done();return;}
     left=work;
-    cue(`Start ${exercises[e].name}`,880);
+    cue("start");
   }
   draw();
 }
@@ -391,9 +303,10 @@ function tick(){
   if(left>0){
     left--;
     elapsed++;
-    if(left===3) cue("Three",700);
-    if(left===2) cue("Two",760);
-    if(left===1) cue("One",820);
+    if(left===3 || left===2 || left===1){
+      lastCue="";
+      cue("count");
+    }
     draw();
   }else{
     advance();
@@ -405,7 +318,10 @@ function startPause(){
   if(el.phase.textContent==="Complete") reset();
   running=!running;
   if(running){
-    if(elapsed===0 && !resting) cue(`Start ${exercises[e].name}`,880);
+    if(elapsed===0 && !resting){
+      lastCue="";
+      cue("start");
+    }
     clearInterval(id);
     id=setInterval(tick,1000);
   }
@@ -414,40 +330,41 @@ function startPause(){
 
 function reset(){
   clearInterval(id);
-  if("speechSynthesis" in window) window.speechSynthesis.cancel();
-  r=0;e=0;resting=false;left=work;elapsed=0;running=false;lastSpoken="";
-  el.soundstatus.textContent="Tap Test Selected Voice to unlock sound.";
+  r=0;e=0;resting=false;left=work;elapsed=0;running=false;lastCue="";
+  el.soundstatus.textContent="Tap Test Sound once to unlock audio.";
   draw();
 }
 
 el.start.onclick=startPause;
 el.next.onclick=advance;
 el.reset.onclick=reset;
-el.testVoice.onclick=()=>{
+el.testSound.onclick=()=>{
   unlockAudio();
-  loadVoices();
-  lastSpoken="";
-  tone(880,180);
-  setTimeout(()=>speak("Morning P T voice test. Start Incline Push-Ups."),180);
+  lastCue="";
+  el.soundstatus.textContent="Testing sound pattern...";
+  sound("start");
+  setTimeout(()=>sound("rest"),700);
+  setTimeout(()=>sound("count"),1400);
+  setTimeout(()=>sound("finish"),1900);
 };
-el.voiceSelect.onchange=()=>{
-  localStorage.setItem("morningPTVoiceName",el.voiceSelect.value);
-  lastSpoken="";
-  el.soundstatus.textContent="Voice saved. Tap Test Selected Voice.";
+el.soundStyle.onchange=()=>{
+  localStorage.setItem("morningPTSoundStyle",el.soundStyle.value);
+  el.soundstatus.textContent="Sound style saved.";
 };
+el.soundOn.onchange=()=>{
+  localStorage.setItem("morningPTSoundOn",el.soundOn.checked ? "1" : "0");
+};
+
+const savedStyle=localStorage.getItem("morningPTSoundStyle");
+if(savedStyle) el.soundStyle.value=savedStyle;
+const savedSound=localStorage.getItem("morningPTSoundOn");
+if(savedSound==="0") el.soundOn.checked=false;
 
 renderList();
 draw();
 
-if("speechSynthesis" in window){
-  loadVoices();
-  window.speechSynthesis.onvoiceschanged=loadVoices;
-  setTimeout(loadVoices,250);
-  setTimeout(loadVoices,1000);
-}
-
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("service-worker.js?v=5").catch(()=>{});
+  navigator.serviceWorker.register("service-worker.js?v=6").catch(()=>{});
 }
 </script>
 </body>
