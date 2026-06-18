@@ -9,8 +9,22 @@ A simple 15-minute no-jump morning calisthenics timer built for men over 40.
 - 40 seconds work / 20 seconds rest
 - Next workout prompt during rest
 - Voice cues for start, rest, countdown, and next movement
+- Voice style selector
 - No jumping
 - iPhone and Android home-screen friendly
+
+## Voice Styles
+
+The app uses the browser/device text-to-speech voices available on the user's phone.
+
+Included voice style options:
+
+- System Default
+- Command Voice
+- Deep Coach Style
+- British Female Style
+
+Voice quality and available accents depend on the device and browser.
 
 ## Standard Circuit
 

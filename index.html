@@ -31,8 +31,12 @@ h1{text-align:center;font-size:26px;line-height:1.1;margin:8px 0 4px}
 .rest .nextbox{display:block}
 .nextlabel{font-size:13px;color:#fcd34d;font-weight:900;text-transform:uppercase;letter-spacing:1px}
 .nextname{font-size:22px;font-weight:1000;margin-top:4px}
-.soundrow{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px;color:var(--muted);font-size:14px}
+.soundpanel{margin-top:14px;padding:12px;border-radius:16px;background:rgba(51,65,85,.45);border:1px solid rgba(255,255,255,.08)}
+.soundrow{display:flex;gap:10px;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
 .soundrow input{width:22px;height:22px}
+.voicegrid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+select{width:100%;border:1px solid rgba(255,255,255,.18);background:#0f172a;color:var(--text);border-radius:12px;padding:12px;font-size:15px;font-weight:700}
+.testvoice{background:#475569;font-size:15px;padding:12px}
 .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
 button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;font-weight:900;background:var(--blue);cursor:pointer}
 .start{background:var(--green);color:#052e16}
@@ -44,6 +48,7 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
 .item b{color:white}
 .item span{color:var(--muted);font-size:14px;line-height:1.35}
 .help{color:var(--muted);font-size:15px;line-height:1.45}
+.smallnote{color:var(--muted);font-size:12px;line-height:1.35;text-align:center;margin-top:8px}
 </style>
 </head>
 <body>
@@ -71,10 +76,22 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
 
   <div class="bar"><div id="fill" class="fill"></div></div>
 
-  <label class="soundrow">
-    <input id="voice" type="checkbox" checked>
-    Voice cues on
-  </label>
+  <div class="soundpanel">
+    <label class="soundrow">
+      <input id="voice" type="checkbox" checked>
+      Voice cues on
+    </label>
+    <div class="voicegrid">
+      <select id="voiceStyle">
+        <option value="auto">System Default</option>
+        <option value="coach">Command Voice</option>
+        <option value="deep">Deep Coach Style</option>
+        <option value="britishFemale">British Female Style</option>
+      </select>
+      <button id="testVoice" class="testvoice" type="button">Test Voice</button>
+    </div>
+    <div class="smallnote">Voice quality depends on the phone/browser voices available.</div>
+  </div>
 
   <div class="controls">
     <button id="start" class="start">Start</button>
@@ -93,7 +110,7 @@ button{border:0;border-radius:16px;padding:16px 10px;color:white;font-size:18px;
   <div class="help">
     Open the GitHub Pages app link in Safari or Chrome and add it to your Home Screen.
     <br><br>
-    <b>Voice note:</b> On some phones, sound starts only after you tap Start. Keep your phone off silent if you want to hear the cue tones.
+    <b>Voice note:</b> On some phones, voice starts only after you tap Start or Test Voice. Keep your phone off silent if you want to hear cue tones.
   </div>
 </section>
 </div>
@@ -108,7 +125,7 @@ const exercises=[
 ];
 
 const work=40,rest=20,rounds=3,totalWorkout=900;
-let r=0,e=0,resting=false,left=work,elapsed=0,running=false,id=null,lastSpoken="";
+let r=0,e=0,resting=false,left=work,elapsed=0,running=false,id=null,lastSpoken="",availableVoices=[];
 
 const el={
 card:document.getElementById("card"),
@@ -126,8 +143,49 @@ reset:document.getElementById("reset"),
 workout:document.getElementById("workout"),
 nextbox:document.getElementById("nextbox"),
 nextname:document.getElementById("nextname"),
-voice:document.getElementById("voice")
+voice:document.getElementById("voice"),
+voiceStyle:document.getElementById("voiceStyle"),
+testVoice:document.getElementById("testVoice")
 };
+
+function loadVoices(){
+  if(!("speechSynthesis" in window)) return;
+  availableVoices = window.speechSynthesis.getVoices() || [];
+}
+
+function pickVoice(style){
+  if(!availableVoices.length) loadVoices();
+  const voices = availableVoices;
+  if(!voices.length) return null;
+
+  const by = (fn) => voices.find(fn) || null;
+
+  if(style==="britishFemale"){
+    return by(v => /en-GB|en_GB/i.test(v.lang) && /female|samantha|serena|susan|kate|victoria|moira|tessa|zira|google uk english female/i.test(v.name))
+        || by(v => /en-GB|en_GB/i.test(v.lang))
+        || by(v => /female|samantha|serena|susan|kate|victoria|moira|tessa|zira/i.test(v.name));
+  }
+
+  if(style==="deep"){
+    return by(v => /daniel|alex|fred|ralph|tom|david|mark|google uk english male|male/i.test(v.name))
+        || by(v => /^en/i.test(v.lang));
+  }
+
+  if(style==="coach"){
+    return by(v => /alex|daniel|david|mark|tom|google us english|microsoft david|microsoft mark/i.test(v.name))
+        || by(v => /^en-US|en_US/i.test(v.lang))
+        || by(v => /^en/i.test(v.lang));
+  }
+
+  return by(v => /^en/i.test(v.lang)) || voices[0];
+}
+
+function voiceSettings(style){
+  if(style==="deep") return {rate:.88,pitch:.72,volume:1};
+  if(style==="coach") return {rate:.92,pitch:.9,volume:1};
+  if(style==="britishFemale") return {rate:.96,pitch:1.12,volume:1};
+  return {rate:.95,pitch:1,volume:1};
+}
 
 function fmt(s){
   s=Math.max(0,s);
@@ -142,10 +200,19 @@ function nextExerciseName(){
 
 function speak(text){
   if(!el.voice.checked || !("speechSynthesis" in window)) return;
+  loadVoices();
   window.speechSynthesis.cancel();
+
+  const style=el.voiceStyle.value;
   const msg=new SpeechSynthesisUtterance(text);
-  msg.rate=.95;
-  msg.pitch=1;
+  const settings=voiceSettings(style);
+  const chosenVoice=pickVoice(style);
+
+  if(chosenVoice) msg.voice=chosenVoice;
+  msg.rate=settings.rate;
+  msg.pitch=settings.pitch;
+  msg.volume=settings.volume;
+
   window.speechSynthesis.speak(msg);
 }
 
@@ -208,7 +275,7 @@ function done(){
   el.phase.textContent="Complete";
   el.exercise.textContent="Nice work";
   el.timer.textContent="✓";
-  el.tip.textContent="You knocked out your morning PT.";
+  el.tip.textContent="You knocked out your morning P T.";
   el.nextname.textContent="Done";
   el.fill.style.width="100%";
   el.start.textContent="Start Again";
@@ -265,8 +332,16 @@ function reset(){
 el.start.onclick=startPause;
 el.next.onclick=advance;
 el.reset.onclick=reset;
+el.testVoice.onclick=()=>{lastSpoken="";cue("Morning P T ready. Start Incline Push-Ups.",880);};
+el.voiceStyle.onchange=()=>{lastSpoken="";};
+
 renderList();
 draw();
+
+if("speechSynthesis" in window){
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged=loadVoices;
+}
 
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("service-worker.js").catch(()=>{});

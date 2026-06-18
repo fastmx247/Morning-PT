@@ -1,4 +1,4 @@
-const CACHE_NAME = "morning-pt-v2";
+const CACHE_NAME = "morning-pt-v3";
 const FILES = ["./", "index.html", "manifest.json"];
 
 self.addEventListener("install", event => {
